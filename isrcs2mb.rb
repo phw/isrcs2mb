@@ -11,6 +11,7 @@
 # * RBrainz and MB-DiscID (http://rbrainz.rubyforge.org)
 # * icedax
 # * HighLine (http://highline.rubyforge.org)
+# * Launchy (optional, http://copiousfreetime.rubyforge.org/launchy/)
 #
 # Copyright (C) 2009-2010 Philipp Wolfer <ph.wolfer@googlemail.com>
 # 
@@ -38,11 +39,16 @@
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-# Load RBrainz and include the MusicBrainz namespace.
 require 'rbrainz'
 require 'mb-discid'
 require 'optparse'
 require 'highline/import'
+begin
+  require 'rubygems'
+  require 'launchy'
+rescue LoadError
+  Launchy = nil
+end
 include MusicBrainz
 
 ICEDAX = (`which icedax`).strip
@@ -63,6 +69,16 @@ end
 HighLine.track_eof = false
 def get_choice(release)
   Proc.new { release }
+end
+
+def submit_release_question(disc)
+  if Launchy
+    if agree("Do you want to submit this release to MusicBrainz?")
+      Launchy.open disc.submission_url
+    end
+  else
+    say "Use the following URL to submit the release to MusicBrainz:\n%s" % disc.submission_url
+  end
 end
 
 device = DiscID.default_device
@@ -142,7 +158,8 @@ query = Webservice::Query.new(ws, :client_id => 'RBrainz ISRC submission ' + RBR
 releases = query.get_releases(:discid => disc)
 
 if releases.size == 0
-  say "\nNo release found. Use the following URL to submit the release to MusicBrainz:\n%s" % disc.submission_url
+  say "\nNo release found. "
+  submit_release_question(disc)
   exit 1
 end
 
@@ -154,8 +171,9 @@ release = choose do |menu|
     text = "'%s' by '%s' (%s)" % [release, release.artist, release.id.uuid]
     menu.choice(text, &get_choice(release))
   end
-  menu.choice("None") do
-    say "\nNo release found. Use the following URL to submit the release to MusicBrainz:\n%s" % disc.submission_url
+  menu.choice("None of the above") do
+    say "\nNo release found. "
+    submit_release_question(disc)
     exit 1
   end
 end
