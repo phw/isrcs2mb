@@ -1,15 +1,18 @@
 #!/usr/bin/env ruby
 # -*- coding: utf-8 -*-
 #
+# $Id$
+#
 # Simple command line tool to submit ISRCs from a CD to MusicBrainz.
-# For usage details run "ruby submitisrcs.rb --help".
+# For usage details run "ruby isrcs2mb.rb --help".
 #
 # Requirements:
 # * Ruby
 # * RBrainz and MB-DiscID (http://rbrainz.rubyforge.org)
 # * icedax
+# * HighLine (http://highline.rubyforge.org)
 #
-# Copyright (C) 2009 Philipp Wolfer <ph.wolfer@googlemail.com>
+# Copyright (C) 2009-2010 Philipp Wolfer <ph.wolfer@googlemail.com>
 # 
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -39,12 +42,11 @@
 require 'rbrainz'
 require 'mb-discid'
 require 'optparse'
+require 'highline/import'
 include MusicBrainz
 
 ICEDAX = (`which icedax`).strip
 ISRC_COMMAND = "%s -device %s --info-only --no-infofile -v trackid 2>&1"
-
-STDOUT.sync = true
 
 def read_isrcs(device)
     isrcs = []
@@ -56,6 +58,11 @@ def read_isrcs(device)
       end
     end
     return isrcs
+end
+
+HighLine.track_eof = false
+def get_choice(release)
+  Proc.new { release }
 end
 
 device = DiscID.default_device
@@ -83,7 +90,7 @@ end
 opts.parse!(ARGV)
 
 if ICEDAX.empty?
-    puts "icedax not found. Please make sure that you have installed icedax."
+    say "icedax not found. Please make sure that you have installed icedax."
     exit 1
 end
 
@@ -91,19 +98,28 @@ end
 begin
     disc = MusicBrainz::DiscID.new
     disc.read(device)
-    puts "Disc ID: %s" % disc.id
+    say "Disc ID: %s" % disc.id
 rescue Exception => e
-    puts "Can not read disc in %s" % device
+    say "Can not read disc in %s" % device
     exit 1
 end
 
-print "Reading ISRCs from %s..." % device
+say "Reading ISRCs from %s... " % device
 isrcs = read_isrcs(device)
-puts " %d ISRCs found." % isrcs.size
+say "%d ISRCs found." % isrcs.size
 
 if isrcs.size == 0
-    puts "No ISRCs found, exiting."
+    say "No ISRCs found, exiting."
     exit 1
+end
+
+# Ask for user credentials
+if username.empty?
+  username = ask("Username: ")
+end
+
+if password.empty?
+  password = ask("Password: ") { |q| q.echo = "*" }
 end
 
 # Set the authentication for the webservice.
@@ -118,27 +134,26 @@ ws = Webservice::Webservice.new(
 query = Webservice::Query.new(ws, :client_id => 'RBrainz ISRC submission ' + RBRAINZ_VERSION)
 releases = query.get_releases(:discid => disc)
 
-# Show all releases to the user
-for i in 0...releases.size do
-  release = releases[i].entity
-  puts "%2.2d: '%s' by '%s' (%s)" % [i+1, release, release.artist, release.id.uuid]
+if releases.size == 0
+  say "\nNo release found. Use the following URL to submit the release to MusicBrainz:\n%s" % disc.submission_url
+  exit 1
 end
 
 # Let the user select one release
-if releases.size == 0
-    puts "No release found. Submit: %s" % disc.submission_url
+release = choose do |menu|
+  menu.header = "\nSelect release"
+  for i in 0...releases.size do
+    release = releases[i].entity
+    text = "'%s' by '%s' (%s)" % [release, release.artist, release.id.uuid]
+    menu.choice(text, &get_choice(release))
+  end
+  menu.choice("None") do
+    say "\nNo release found. Use the following URL to submit the release to MusicBrainz:\n%s" % disc.submission_url
     exit 1
-elsif releases.size > 1
-    begin
-      print "Select release: "
-      release_no = STDIN.gets.strip.to_i
-    end while release_no <= 0 or release_no > releases.size
-else
-    release_no = 1
+  end
 end
 
 # Create a mapping between track IDs and ISRCs
-release = releases[release_no-1].entity
 track_isrc_map = []
 for i in 0...release.tracks.size do
   track = release.tracks[i]
@@ -147,12 +162,13 @@ for i in 0...release.tracks.size do
 end
 
 # Submit the ISRCs for some tracks.
-print "Submitting ISRCs for %d tracks to MusicBrainz..." % track_isrc_map.size
+say "Submitting ISRCs for %d tracks to MusicBrainz... " % track_isrc_map.size
 begin
   query.submit_isrcs(track_isrc_map)
 rescue Webservice::AuthenticationError => e
-  puts "Wrong username or password."
+  say "failed."
+  say "Wrong username or password."
   exit 1
 end
-puts " done."
+say "done."
 exit
