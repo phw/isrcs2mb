@@ -115,11 +115,18 @@ end
 
 # Ask for user credentials
 if username.empty?
-  username = ask("Username: ")
+  username = ask("Username: ") do |q|
+    q.validate = lambda { |a| not a.empty? }
+    q.responses[:not_valid] = "Please enter a username."
+  end
 end
 
 if password.empty?
-  password = ask("Password: ") { |q| q.echo = "*" }
+  password = ask("Password: ") do |q|
+    q.echo = "*"
+    q.validate = lambda { |a| not a.empty? }
+    q.responses[:not_valid] = "Please enter a password."
+  end 
 end
 
 # Set the authentication for the webservice.
