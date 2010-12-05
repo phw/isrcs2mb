@@ -1,2 +1,7 @@
 * text=auto !eol
-/isrcs2mb.rb -text svn_keywords=Id
+/CHANGES -text svn_keywords=Id
+/LICENSE -text svn_keywords=Id
+/README -text svn_keywords=Id
+/Rakefile -text svn_keywords=Id
+bin/isrcs2mb -text svn_keywords=Id
+lib/isrcs2mb.rb -text

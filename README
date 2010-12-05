@@ -1,0 +1,17 @@
+isrcs2mb
+
+Simple command line tool to submit ISRCs from a CD to MusicBrainz.
+For usage details run "isrcs2mb --help".
+
+Requirements:
+* Ruby
+* RBrainz and MB-DiscID (http://rbrainz.rubyforge.org)
+* icedax
+* HighLine (http://highline.rubyforge.org)
+* Launchy (optional, http://copiousfreetime.rubyforge.org/launchy/)
+
+Usage: isrcs2mb [options]
+    -r, --device DEVICE              CD device.
+    -u, --username USERNAME          MusicBrainz username.
+    -p, --password PASSWORD          MusicBrainz password.
+    -h, --help                       This help message.

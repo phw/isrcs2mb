@@ -4,7 +4,7 @@
 # $Id$
 #
 # Simple command line tool to submit ISRCs from a CD to MusicBrainz.
-# For usage details run "ruby isrcs2mb.rb --help".
+# For usage details run "ruby isrcs2mb --help".
 #
 # Requirements:
 # * Ruby
@@ -87,7 +87,7 @@ password = ''
 
 # Read the command line parameters
 opts = OptionParser.new do |o|
-    o.banner = "Usage: submit_isrcs [options]"
+    o.banner = "Usage: isrcs2mb [options]"
     o.on( "-r", "--device DEVICE", "CD device." ) do |r|
         device = r
     end
