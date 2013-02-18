@@ -51,17 +51,10 @@ rescue LoadError
 end
 include MusicBrainz
 
-ICEDAX = (`which icedax`).strip
-ISRC_COMMAND = "%s -device %s --info-only --no-infofile -v trackid 2>&1"
-
-def read_isrcs(device)
-    isrcs = []
-    IO.popen(ISRC_COMMAND % [ICEDAX, device]) do |io|
-      io.each_line do |line|
-        if line =~ /T:\s+(\d+)\s+ISRC:\s+([A-Z]{2}-?\w{3}-?\d{2}-?\d{5})$/
-          isrcs[$1.to_i - 1] = Model::ISRC.parse($2)
-        end
-      end
+def read_isrcs(disc)
+  isrcs = {}
+    disc.track_details do |track|
+      isrcs[track.number - 1] = Model::ISRC.parse(track.isrc) unless track.isrc.nil?
     end
     return isrcs
 end
@@ -105,14 +98,10 @@ end
 
 opts.parse!(ARGV)
 
-if ICEDAX.empty?
-    say "icedax not found. Please make sure that you have installed icedax."
-    exit 1
-end
-
 # Read the disc ID
 begin
     disc = MusicBrainz::DiscID.new
+    say "Reading ISRCs from %s...\n" % device
     disc.read(device)
     say "Disc ID: %s" % disc.id
 rescue Exception => e
@@ -120,13 +109,16 @@ rescue Exception => e
     exit 1
 end
 
-say "Reading ISRCs from %s... " % device
-isrcs = read_isrcs(device)
+isrcs = read_isrcs(disc)
 say "%d ISRCs found." % isrcs.size
 
 if isrcs.size == 0
     say "No ISRCs found, exiting."
     exit 1
+end
+
+isrcs.each do |number, isrc|
+    say "%02d %s" % [number + 1, isrc]
 end
 
 # Ask for user credentials
@@ -154,7 +146,7 @@ ws = Webservice::Webservice.new(
 
 # Create a new Query object which will provide
 # us an interface to the MusicBrainz web service.
-query = Webservice::Query.new(ws, :client_id => 'RBrainz ISRC submission ' + RBRAINZ_VERSION)
+query = Webservice::Query.new(ws, :client_id => 'isrcs2mb ISRC submission ' + RBRAINZ_VERSION)
 releases = query.get_releases(:discid => disc)
 
 if releases.size == 0
