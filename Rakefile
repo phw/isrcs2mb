@@ -30,10 +30,9 @@ spec = Gem::Specification.new do |spec|
   spec.bindir = 'bin'
   spec.executables << 'isrcs2mb'
   spec.add_dependency('rbrainz', '>= 0.5.1')
-  spec.add_dependency('mb-discid', '>= 0.1.4')
+  spec.add_dependency('discid', '>= 1.0.0.rc1')
   spec.add_dependency('highline', '>= 1.6.1')
   spec.add_dependency('launchy', '>= 0.3.5')
-  spec.requirements << 'icedax >= 1.1.10 (for reading ISRCs)'
   spec.description = <<EOF
     Simple command line tool to submit ISRCs from a CD to MusicBrainz.
     For usage details run "isrcs2mb --help".

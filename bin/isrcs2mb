@@ -1,8 +1,6 @@
 #!/usr/bin/env ruby
 # -*- coding: utf-8 -*-
 #
-# $Id$
-#
 # Simple command line tool to submit ISRCs from a CD to MusicBrainz.
 # For usage details run "ruby isrcs2mb --help".
 #
@@ -40,7 +38,7 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 require 'rbrainz'
-require 'mb-discid'
+require 'discid'
 require 'optparse'
 require 'highline/import'
 begin
@@ -53,7 +51,7 @@ include MusicBrainz
 
 def read_isrcs(disc)
   isrcs = {}
-    disc.track_details do |track|
+    disc.tracks do |track|
       isrcs[track.number - 1] = Model::ISRC.parse(track.isrc) unless track.isrc.nil?
     end
     return isrcs
@@ -74,7 +72,7 @@ def submit_release_question(disc)
   end
 end
 
-device = DiscID.default_device
+device = DiscId.default_device
 username = ''
 password = ''
 
@@ -100,9 +98,8 @@ opts.parse!(ARGV)
 
 # Read the disc ID
 begin
-    disc = MusicBrainz::DiscID.new
     say "Reading ISRCs from %s...\n" % device
-    disc.read(device)
+    disc = DiscId.read(device, :isrc)
     say "Disc ID: %s" % disc.id
 rescue Exception => e
     say "Can not read disc in %s" % device
